@@ -120,24 +120,12 @@ class FlowGraph:
                     total_flow += maxg
         return total_flow
   
-class MaxMatching:
+
+class StockCharts:
     def read_data(self):
-        nflights, mcrews = map(int, input().split())
-        vertex_count = nflights + mcrews + 2
-        graph = FlowGraph(vertex_count)
-        graph.nflights = nflights
-        graph.mcrews = mcrews
-        for flight in range(nflights):
-            graph.add_edge(0, flight+1, 1) 
-        c1 = nflights
-        for flight in range(nflights):
-            crews = map(int, input().split())
-            for crew,b in enumerate(crews):
-                if b==1:
-                    graph.add_edge(flight+1, c1+1+crew, capacity=1)
-        for crew in range(mcrews):
-            graph.add_edge(c1+1+crew,vertex_count-1,1) 
-        return graph
+        n, k = map(int, input().split())
+        stock_data = [list(map(int, input().split())) for i in range(n)]
+        return stock_data
 
     #def read_data_file(filename):
     #    with open(filename,'r') as f:
@@ -148,25 +136,6 @@ class MaxMatching:
     #            graph.add_edge(u-1, v-1, capacity)
     #    return graph
 
-    def write_response(self, matching):
-        line = [str(-1 if x == -1 else x + 1) for x in matching]
-        print(' '.join(line))
-
-    def solve(self):
-        adj_graph = self.read_data()
-        #adj_graph.print()
-        adj_graph.max_flow(0,adj_graph.size()-1)
-        #adj_graph.print()
-        matching = adj_graph.get_matching()
-        print(' '.join([str(x) for x in matching]))
-        #self.write_response(matching)
-
-class StockCharts:
-    def read_data(self):
-        n, k = map(int, input().split())
-        stock_data = [list(map(int, input().split())) for i in range(n)]
-        return stock_data
-
     def make_flow_graph(self,stock_data):
         n = len(stock_data)
         k = len(stock_data[0])
@@ -176,12 +145,13 @@ class StockCharts:
         for stock in range(n):
             graph.add_edge(0, stock+1, 1) 
         for ix,istock in enumerate(stock_data):
-            for jx,jstock in enumerate(stock_data,n+1): 
-                if all(jstock < istock):
+            for jx,jstock in enumerate(stock_data): 
+                if all([a<b for a,b in zip(jstock,istock)]):
                     graph.add_edge(ix+1, n+1+jx, capacity=1)
         # connect the right bipartite to the sink
         for stock in range(n):
             graph.add_edge(n+1+stock,vertex_count-1,1) 
+        return graph
 
     def write_response(self, result):
         print(result)
@@ -213,26 +183,9 @@ class StockCharts:
         return len(charts)
 
     def min_charts(self, stock_data):
-        n = len(stock_data)
-        k = len(stock_data[0])
-        charts = []
-        for new_stock in stock_data:
-            added = False
-            for chart in charts:
-                fits = True
-                for stock in chart:
-                    above = all([x > y for x, y in zip(new_stock, stock)])
-                    below = all([x < y for x, y in zip(new_stock, stock)])
-                    if (not above) and (not below):
-                        fits = False
-                        break
-                if fits:
-                    added = True
-                    chart.append(new_stock)
-                    break
-            if not added:
-                charts.append([new_stock])
-        return len(charts)
+        graph = self.make_flow_graph(stock_data)
+        total_flow = graph.max_flow(0,graph.size()-1)
+        return len(stock_data)-total_flow
 
     def solve(self):
         stock_data = self.read_data()
