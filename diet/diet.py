@@ -56,11 +56,19 @@ def MarkPivotElementUsed(pivot_element, used_rows, used_columns):
     used_rows[pivot_element.row] = True
     used_columns[pivot_element.column] = True
 
+def compare_LE(a,b):
+    #if (abs(a)>0 or abs(b)>0) and abs(a-b)/max(abs(a),abs(b)) < 10**-6:
+    #    return True
+    return round(a,5)<=round(b,5)
+
 def CheckInequalities(A,b,x):
     bcheck = [0 for _ in range(len(b))]
     for i in range(len(A)):
         bcheck[i] = sum([a*x_ for a,x_ in zip(A[i],x)])
-    return all([x<=y for x,y in zip(bcheck,b)])
+    #print("bcheck: ", bcheck)
+    #print("b:      ", b)
+    #print("wtf:    ", [compare_LE(x,y) for x,y in zip(bcheck,b)])
+    return all([compare_LE(x,y) for x,y in zip(bcheck,b)])
 
 def SolveEquation(equation):
     a = equation.a[:]
@@ -69,20 +77,27 @@ def SolveEquation(equation):
 
     used_columns = [False] * size
     used_rows = [False] * size
+    problem=False
     for step in range(size):
         pivot_element = SelectPivotElement(a, used_rows, used_columns)
         if not pivot_element:
-            return False
+            problem = True
+            break
         SwapLines(a, b, used_rows, pivot_element)
         ProcessPivotElement(a, b, pivot_element)
         MarkPivotElementUsed(pivot_element, used_rows, used_columns)
+    #print("a problem? ",problem)
+    #for row,aug in zip(a,b):
+    #    print(row,aug)
+    #print("done")
+    if problem:
+        return False
     # b holds the solution x at this point
-    print("FOO: ", sum(used_columns), len(equation.a))
     return b
 
 def make_subsets(n,m):
-    a = [(),(1,)]
-    for i in range(2,n+m):
+    a = [(),(0,)]
+    for i in range(1,n+m+1):
         newa = a.copy()
         for x in newa:
             a.append(x+(i,))
@@ -94,10 +109,14 @@ def solve_diet_problem(n, m, A, b, c):
     best_solution = None
     no_solutions = True
     for subset in make_subsets(n,m):
+        #print("***** ", subset)
         eqn = Equation([A[i] for i in subset],[b[i] for i in subset])
         x = SolveEquation(eqn)
+        #if x:
+        #    satisfaction = sum([c_*x_ for c_,x_ in zip(c,x)]) #DELETE ME
+        #    print("Satisfaction: ", satisfaction) #DELETE ME
         if x and CheckInequalities(A,b,x):
-            print("passed")
+            #print("Inequalities OK")
             no_solutions = False
             satisfaction = sum([c_*x_ for c_,x_ in zip(c,x)])
             if satisfaction > best_satisfaction:
@@ -105,6 +124,8 @@ def solve_diet_problem(n, m, A, b, c):
                 best_solution = x
     if no_solutions:
         return [-1, False]
+    if sum(best_solution) > (10**9-1):
+        return [1,False]
     else:
         return [0,best_solution]
 
@@ -122,7 +143,9 @@ b = list(map(int, stdin.readline().split()))
 #Append constraint that all variables are positive
 for i in range(m):
     A += [[-1 if i==j else 0 for j in range(m)]]
+A += [[1 for _ in range(m)]]
 b += [0 for j in range(m)]
+b += [10**9]
 c = list(map(int, stdin.readline().split()))
 
 anst, ansx = solve_diet_problem(n, m, A, b, c)
